@@ -42,8 +42,18 @@ app.use(passport.initialize());
 app.use(passport.session());
 require('./passportConfig')(passport);
 
-app.post("/login", (req,res) => {
-    console.log(req.body);
+app.post("/login", (req,res,next) => {
+    passport.authenticate('local', (err,user, info) => {
+        if(err) throw err;
+        if(!user) res.send("No user exists");
+        else{
+            req.logIn(user,(err)=>{
+                if(err) throw err;
+                res.send("Succesfully Authenticated")
+                console.log(req.user);
+            });
+        }
+    })(req, res, next);
 })
 app.post("/register", (req,res) => {
     console.log(req.body);
@@ -64,7 +74,7 @@ app.post("/register", (req,res) => {
     })
 })
 app.get("/user", (req,res) => {
-
+    res.send(req.user);
 })
 
 
