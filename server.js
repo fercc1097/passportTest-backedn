@@ -9,12 +9,13 @@ const expressSessions = require('express-session');
 const bodyParser = require('body-parser');
 const sessions = require('express-session');
 const User = require('./user');
-const mongoPass = require('./foo');
+const mongoPass = require('./foo'); // This file is not included in git
 
 const app = express();
+const mongoString = `mongodb+srv://passport:${mongoPass()}@cluster0.hhwfo.mongodb.net/<dbname>?retryWrites=true&w=majority`.toString();
 
 mongoose.connect(
-    `mongodb+srv://passport:${mongoPass}@cluster0.hhwfo.mongodb.net/<dbname>?retryWrites=true&w=majority`,
+    mongoString,
     {
         useNewUrlParser: true,
         useUnifiedTopology: true,
@@ -35,18 +36,27 @@ app.use(sessions({
     resave: true,
     saveUninitialized: true
 }));
+
+app.use(cookieParser("secretcode"));
+app.use(passport.initialize());
+app.use(passport.session());
+require('./passportConfig')(passport);
+
 app.post("/login", (req,res) => {
     console.log(req.body);
 })
 app.post("/register", (req,res) => {
+    console.log(req.body);
     User.findOne({username: req.body.username}, async (err,doc) => {
         if(err) throw err;
         if(doc) res.send('User already exists');
         if(!doc) {
-            console.log(req.body)
+            const hashedPassword = await bcrypt.hash(req.body.password,10);
+            console.log(hashedPassword);
+
             const newUser = new User({
                 username: req.body.username,
-                password: req.body.password,
+                password: hashedPassword,
             });
             await newUser.save();
             res.send("User created succesfully");
@@ -57,7 +67,6 @@ app.get("/user", (req,res) => {
 
 })
 
-app.use(cookieParser("secretcode"));
 
 app.listen(4000, ()=>{
     console.log('server has started');
